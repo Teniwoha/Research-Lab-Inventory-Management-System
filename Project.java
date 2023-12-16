@@ -3,14 +3,14 @@ Laboratory Inventory System
 Junhyuk Lee and Eric Hu
 
 Things to Note:
-1) The fields for AddProductGUI does not clear unless you succesfully add a product
+1) The fields for AddProductGUI do not clear unless you succesfully add a product
 2) A product with a duplicate name cannot be added
 3) The minimum stock of a product is 10, and the minimum price is 1. An error will be thrown if the input does not fit these criteria. Same applies of UpdateProductDetailsGUI.
 4) Input formats should be valid. Otherwise, errors will be thrown.
 5) For ease of sale, the selection and the quantity field for ManageStockGUI will not be cleared even after a successful sale. 
 6) Once you sell a product that drops its stock below the threshold (10), a popup option will show up that gives you the option to replenish the stock to 100. 
 7) If you do not replenish the stock and try to sell quanities of produc that exceeds the current stock, error will be thrown.
-8) You MUST have the text files "inventory.txt" and "sales.txt" in the same directory as this program! They will serve as the databases that save and fetch the products and sales! If you want to reset it, just clear out the appropriate text files. 
+8) The program will create an "inventory.txt" file, which will be used as a database that contain all the relevant data for products and sales. Clear the text file in order to reset all the data. 
 
 Repository link: https://github.com/Teniwoha/Research-Lab-Inventory-Management-System
 */
@@ -65,13 +65,13 @@ class Product{
     public void setPrice(double price){
         this.price = price;
     }
-    public String toString() {
+    public String toString(){
         return name + "," + stock + "," + price;
     }
 
-    public static Product fromString(String productString) {
+    public static Product fromString(String productString){
         String[] parts = productString.split(",");
-        if (parts.length != 3) {
+        if (parts.length != 3){
             throw new IllegalArgumentException("Invalid product string format");
         }
         String name = parts[0];
@@ -141,13 +141,13 @@ class Sale{
     public void setTotalProfit(double total_profit){
         this.total_profit = total_profit;
     }
-    public String toString() {
+    public String toString(){
         return date + "," + name + "," + stock + "," + price + "," + profit + "," + total_profit;
     }
 
-    public static Sale fromString(String saleString) {
+    public static Sale fromString(String saleString){
         String[] parts = saleString.split(",");
-        if (parts.length != 6) {
+        if (parts.length != 6){
             throw new IllegalArgumentException("Invalid sale string format");
         }
         String date = parts[0];
@@ -167,14 +167,16 @@ class InventoryManager{
         inventory = new ArrayList<>();
         sales = new ArrayList<>();
         try {
+            inventory.clear();
+            sales.clear();
             loadData("inventory.txt");
-            loadData("sales.txt");
+            System.out.println("Files loaded!\n");
             if (sales.size() > 0){
                 setTotalProfit(sales.get(sales.size() - 1).getTotalProfit());
             }
         }
-        catch (IOException e) {
-            System.err.println("Error loading data: " + e.getMessage());
+        catch (IOException error){
+            System.err.println("Error loading data: " + error.getMessage());
         }
     }
 
@@ -197,48 +199,51 @@ class InventoryManager{
     public static void addProduct(Product product){
         inventory.add(product);
         try {
-
             saveData("inventory.txt");
+            System.out.println("product saved in file!\n");
         }
-        catch (IOException e) {
-            System.err.println("Error saving data: " + e.getMessage());
+        catch (IOException error){
+            System.err.println("Error saving data: " + error.getMessage());
         }
     }
     public static void addSale(Sale sale){
         sales.add(sale);
         try {
-            saveData("sales.txt");
+            saveData("inventory.txt");
+            System.out.println("sale saved in file!\n");
         }
-        catch (IOException e) {
-            System.err.println("Error saving data: " + e.getMessage());
-        }
-    }
-    public static void saveData(String filename) throws IOException {
-        try (PrintWriter out = new PrintWriter(new FileWriter(filename))){
-            for (Product product : inventory) {
-                out.println("Product:" + product.toString());
-            }
-            for (Sale sale : sales) {
-                out.println("Sale:" + sale.toString());
-            }
-            out.println("TotalProfit:" + total_profit);
-            out.close();
+        catch (IOException error){
+            System.err.println("Error saving data: " + error.getMessage());
         }
     }
 
-    public static void loadData(String filename) throws IOException {
+    public static void saveData(String filename) throws IOException{
+        try (PrintWriter out = new PrintWriter(new FileWriter(filename, false))){
+            for (Product product : inventory){
+                out.println("Product:" + product.toString());
+            }
+            for (Sale sale : sales){
+                out.println("Sale:" + sale.toString());
+            }
+            out.println("TotalProfit:" + total_profit);
+        }
+    }
+
+    public static void loadData(String filename) throws IOException{
         inventory.clear();
         sales.clear();
         try (BufferedReader br = new BufferedReader(new FileReader(filename))){
             String line;
             while ((line = br.readLine()) != null){
-                if (line.startsWith("Product:")) {
+                if (line.startsWith("Product:")){
                     Product product = Product.fromString(line.substring(8));
                     inventory.add(product);
-                } else if (line.startsWith("Sale:")){
+                } 
+                else if (line.startsWith("Sale:")){
                     Sale sale = Sale.fromString(line.substring(5));
                     sales.add(sale);
-                } else if (line.startsWith("TotalProfit:")){
+                }
+                else if (line.startsWith("TotalProfit:")){
                     total_profit = Double.parseDouble(line.substring(12));
                 }
             }
@@ -355,10 +360,6 @@ class UpdateProductDetailsGUI{
 
     public UpdateProductDetailsGUI(){
         this.filteredProducts = new ArrayList<>(InventoryManager.getInventory());
-        initializeUI();
-    }
-
-    private void initializeUI(){
         jf = new JFrame();
         jf.setTitle("Product Manager");
         jf.setSize(800, 600);
@@ -432,6 +433,13 @@ class UpdateProductDetailsGUI{
                                         product.setPrice(inputPrice);
                                     }
                                 }
+                                try {
+                                    InventoryManager.saveData("inventory.txt");
+                                    System.out.println("product updated in file!\n");
+                                }
+                                catch (IOException error){
+                                    System.err.println("Error saving data: " + error.getMessage());
+                                }
                             }
                         }
                         else{
@@ -443,6 +451,13 @@ class UpdateProductDetailsGUI{
                                         product.setStock(inputStock);
                                         product.setPrice(inputPrice);
                                     }
+                                }
+                                try {
+                                    InventoryManager.saveData("inventory.txt");
+                                    System.out.println("product updated in file!\n");
+                                }
+                                catch (IOException error){
+                                    System.err.println("Error saving data: " + error.getMessage());
                                 }
                             }
                         }
@@ -583,13 +598,20 @@ class ManageStockGUI{
                         System.out.println(date);
                         Sale sale = new Sale(date, selectedProduct.getName(), quantity, selectedProduct.getPrice());
                         InventoryManager.addSale(sale);
-                        if (selectedProduct.getStock() - quantity < 10){
+                        if (selectedProduct.getStock() < 10){
                             int result = JOptionPane.showConfirmDialog(jf, "The stock of " + selectedProduct.getName() + " is running low. Do you want to restock 100?", "Choose an option", JOptionPane.YES_NO_OPTION);
                             if (result == JOptionPane.YES_OPTION){
                                 for (Product product : InventoryManager.getInventory()){
                                     if (product.getName().equals(selectedProduct.getName())){
                                         product.setStock(100);
                                     } 
+                                }
+                                try {
+                                    InventoryManager.saveData("inventory.txt");
+                                    System.out.println("product updated in file!\n");
+                                }
+                                catch (IOException error){
+                                    System.err.println("Error saving data: " + error.getMessage());
                                 }
                             }
                         }
